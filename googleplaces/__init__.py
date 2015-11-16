@@ -210,6 +210,7 @@ class GooglePlaces(object):
         self._api_key = api_key
         self._sensor = False
         self._request_params = None
+        self._next_page_token = None
 
     def query(self, **kwargs):
         with warnings.catch_warnings():
@@ -220,7 +221,7 @@ class GooglePlaces(object):
 
     def nearby_search(self, language=lang.ENGLISH, keyword=None, location=None,
                lat_lng=None, name=None, radius=3200, rankby=ranking.PROMINENCE,
-               sensor=False, types=[]):
+               sensor=False, types=[], next_page_token=None):
         """Perform a nearby search using the Google Places API.
 
         One of either location or lat_lng are required, the rest of the keyword
@@ -248,33 +249,40 @@ class GooglePlaces(object):
                     device using a location sensor (default False).
         types    -- An optional list of types, restricting the results to
                     Places (default []).
+        next_page_token -- If specified, all other parameters are ignored and
+                    the next page of results is retrieved.
         """
-        if location is None and lat_lng is None:
-            raise ValueError('One of location or lat_lng must be passed in.')
-        if rankby == 'distance':
-            # As per API docs rankby == distance:
-            #  One or more of keyword, name, or types is required.
-            if keyword is None and types == [] and name is None:
-                raise ValueError('When rankby = googleplaces.ranking.DISTANCE, ' +
-                                 'name, keyword or types kwargs ' +
-                                 'must be specified.')
-        self._sensor = sensor
-        radius = (radius if radius <= GooglePlaces.MAXIMUM_SEARCH_RADIUS
-                  else GooglePlaces.MAXIMUM_SEARCH_RADIUS)
-        lat_lng_str = self._generate_lat_lng_string(lat_lng, location)
-        self._request_params = {'location': lat_lng_str}
-        if rankby == 'prominence':
-            self._request_params['radius'] = radius
+        if next_page_token is None:
+            if location is None and lat_lng is None:
+                raise ValueError('One of location or lat_lng must be passed in.')
+            if rankby == 'distance':
+                # As per API docs rankby == distance:
+                #  One or more of keyword, name, or types is required.
+                if keyword is None and types == [] and name is None:
+                    raise ValueError('When rankby = googleplaces.ranking.DISTANCE, ' +
+                                     'name, keyword or types kwargs ' +
+                                     'must be specified.')
+            self._sensor = sensor
+            radius = (radius if radius <= GooglePlaces.MAXIMUM_SEARCH_RADIUS
+                      else GooglePlaces.MAXIMUM_SEARCH_RADIUS)
+            lat_lng_str = self._generate_lat_lng_string(lat_lng, location)
+            self._request_params = {'location': lat_lng_str}
+            if rankby == 'prominence':
+                self._request_params['radius'] = radius
+            else:
+                self._request_params['rankby'] = rankby
+            if len(types) > 0:
+                self._request_params['types'] = '|'.join(types)
+            if keyword is not None:
+                self._request_params['keyword'] = keyword
+            if name is not None:
+                self._request_params['name'] = name
+            if language is not None:
+                self._request_params['language'] = language
         else:
-            self._request_params['rankby'] = rankby
-        if len(types) > 0:
-            self._request_params['types'] = '|'.join(types)
-        if keyword is not None:
-            self._request_params['keyword'] = keyword
-        if name is not None:
-            self._request_params['name'] = name
-        if language is not None:
-            self._request_params['language'] = language
+            self._next_page_token = next_page_token
+            self._request_params = {'pagetoken': self._next_page_token}
+
         self._add_required_param_keys()
         url, places_response = _fetch_remote_json(
                 GooglePlaces.NEARBY_SEARCH_API_URL, self._request_params)
@@ -736,6 +744,7 @@ class GooglePlacesSearchResult(object):
         for place in response['results']:
             self._places.append(Place(query_instance, place))
         self._html_attributions = response.get('html_attributions', [])
+        self._next_page_key = response.get("next_page_token", "")
 
     @property
     def raw_response(self):
@@ -747,6 +756,14 @@ class GooglePlacesSearchResult(object):
     @property
     def places(self):
         return self._places
+
+    @property
+    def next_page_key(self):
+        """Returns the next_page_token
+
+        If there are more than 20 results this will not be an empty string
+        """
+        return self._next_page_key
 
     @property
     def html_attributions(self):
