@@ -83,6 +83,14 @@ Code is easier to understand than words, so let us dive right in ::
             # Raw image data
             photo.data
 
+    # Query next page
+    next_page_key = query_result.next_page_key
+    query_result = google_places.nearby_search(
+            next_page_token=next_page_key)
+
+    for place in query_result.places:
+        # Returned places from next page query.
+        print place.name
 
     # Adding and deleting a place
     try:
@@ -143,6 +151,7 @@ Reference
                         using a location sensor (default False)
 
             types    -- An optional list of types, restricting the results to Places (default [])
+
             next_page_token -- If specified, all other parameters are ignored and
                                the next page of results is retrieved. A maximum of 3 requests( 60 places)
 
