@@ -143,7 +143,8 @@ Reference
                         using a location sensor (default False)
 
             types    -- An optional list of types, restricting the results to Places (default [])
-
+            next_page_token -- If specified, all other parameters are ignored and
+                               the next page of results is retrieved. A maximum of 3 requests( 60 places)
 
       text_search(**kwargs)
         Returns googleplaces.GooglePlacesSearchResult
@@ -342,7 +343,7 @@ Reference
 
     googleplaces.Place
       reference
-        (DEPRECATED) Returns a unique identifier for the Place that can be used to 
+        (DEPRECATED) Returns a unique identifier for the Place that can be used to
         fetch full details about it. It is recommended that stored references for
         Places be regularly updated. A Place may have many valid reference tokens.
 
