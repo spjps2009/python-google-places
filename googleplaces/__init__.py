@@ -70,6 +70,7 @@ def _fetch_remote(service_url, params={}, use_http_post=False):
 def _fetch_remote_json(service_url, params={}, use_http_post=False):
     """Retrieves a JSON object from a URL."""
     request_url, response = _fetch_remote(service_url, params, use_http_post)
+    print "request_url: %s, response:%s"%(request_url, response)
     if six.PY3:
         str_response = response.readall().decode('utf-8')
         return (request_url, json.loads(str_response, parse_float=Decimal))
